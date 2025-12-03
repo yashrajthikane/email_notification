@@ -1,1 +1,56 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.log
+
+# --- Virtual Environment ---
+venv/
+env/
+.venv/
+
+# --- Environment Variables ---
 .env
+*.env
+.env.*
+
+# --- IDE / Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS Files ---
+.DS_Store
+Thumbs.db
+
+# --- Uvicorn / FastAPI ---
+*.db
+instance/
+*.sqlite3
+
+# --- Kafka ---
+kafka-logs/
+zookeeper/
+logs/
+
+# --- Pytest / Cache ---
+.coverage
+htmlcov/
+pytest_cache/
+.cache/
+
+# --- Build / Packaging ---
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Bytecode ---
+*.so
+
+# --- Misc ---
+*.tmp
+*.bak
