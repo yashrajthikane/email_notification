@@ -1,37 +1,70 @@
 from confluent_kafka import Consumer
 import json
-from email_client import send_email
+from jinja2 import Environment, FileSystemLoader
+import smtplib
+from email.mime.text import MIMEText
 
-def main():
-    consumer_config = {
-        "bootstrap.servers": "localhost:9092",
-        "group.id": "email-consumers",
-        "auto.offset.reset": "earliest"
-    }
+# ------------------------
+# Jinja Environment
+# ------------------------
+env = Environment(loader=FileSystemLoader("consumer_app/templates"))
 
-    consumer = Consumer(consumer_config)
-    consumer.subscribe(["EMAIL"])
+# ------------------------
+# Kafka Consumer Setup
+# ------------------------
+conf = {
+    "bootstrap.servers": "localhost:9092",
+    "group.id": "email-service",
+    "auto.offset.reset": "earliest",
+}
 
-    print("📥 Kafka Consumer started... Listening to EMAIL topic")
+consumer = Consumer(conf)
+consumer.subscribe(["EMAIL"])
 
-    while True:
-        msg = consumer.poll(1.0)
+print("📩 Email consumer started...")
 
-        if msg is None:
-            continue
+# ------------------------
+# Send Email Function
+# ------------------------
+def send_email(to, subject, html):
+    msg = MIMEText(html, "html")
+    msg["Subject"] = subject
+    msg["From"] = "yourgmail@gmail.com"
+    msg["To"] = to
 
-        if msg.error():
-            print("❌ Error:", msg.error())
-            continue
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        smtp.login("yourgmail@gmail.com", "your_app_password")
+        smtp.send_message(msg)
 
-        try:
-            payload = json.loads(msg.value().decode("utf-8"))
-            print("📩 Received event:", payload)
+    print(f"✅ Email sent to {to}")
 
-            send_email(payload["email_to"], payload["subject"], payload["body"])
+# ------------------------
+# Main Consumer Loop
+# ------------------------
+while True:
+    msg = consumer.poll(1.0)
 
-        except Exception as e:
-            print("⚠️ Error processing message:", e)
+    if msg is None:
+        continue
 
-if __name__ == "__main__":
-    main()
+    if msg.error():
+        print("⚠️ Consumer error:", msg.error())
+        continue
+
+    try:
+        payload = json.loads(msg.value().decode("utf-8"))
+        print("📩 Received event:", payload)
+
+        template_name = payload["template"] + ".hbs"
+
+        template = env.get_template(template_name)   # load template
+        html = template.render(payload["data"])      # apply variables
+
+        send_email(
+            payload["email_to"],
+            payload["subject"],
+            html
+        )
+
+    except Exception as e:
+        print("❌ Error processing message:", str(e))
